@@ -3,7 +3,8 @@ import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from itertools import takewhile
-
+from json import loads, JSONDecodeError
+import time
 
 class IStorage(ABC):
     """
@@ -50,11 +51,39 @@ class ForgetfulStorage(IStorage):
         """
         self.data = OrderedDict()
         self.ttl = ttl
+        # Store our merkle root for individual profiles - use Orderedict since we are using this already
+        self.data_root = OrderedDict()
 
     def __setitem__(self, key, value):
-        if key in self.data:
-            del self.data[key]
-        self.data[key] = (time.monotonic(), value)
+        # This implementation by default overwrites existing entries
+        # if key in self.data:
+        #     del self.data[key]
+        # self.data[key] = (time.monotonic(), value)
+
+        try:
+            value_json = loads(value)
+            prefix = next(iter(value_json)) 
+            if prefix == "newId":
+                if value_json["newId"] in self.data:
+                    print("ID already exists!")
+                    pass
+                else:
+                    # Create and use set to prevent duplicates - add time so we can do conflict resolution
+                    # key -> (time_created, list_of_events)
+                    # Also add artificial delay to prevent race conditions - we keep this small for now to prove the point
+                    time.sleep(0.01)
+                    self.data[key] = (time.monotonic(), set())
+                    self.data_root[key] = (time.monotonic(), set())
+
+            # Append new events and root to existing record
+            elif prefix == "id":
+                self.data[key][1].add(value_json["data"])
+                self.data_root[key][1].add(value_json["root"])
+
+        except JSONDecodeError:
+            print("Not Valid JSON!")
+            pass
+
         self.cull()
 
     def cull(self):

@@ -6,6 +6,7 @@ import asyncio
 import logging
 import pickle
 import random
+from json import loads, JSONDecodeError
 
 from kademlia.crawling import NodeSpiderCrawl, ValueSpiderCrawl
 from kademlia.node import Node
