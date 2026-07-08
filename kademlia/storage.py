@@ -3,8 +3,13 @@ import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from itertools import takewhile
-from json import loads, JSONDecodeError
+from json import loads, JSONDecodeError, dumps
 import time
+
+from ellipticcurve.ecdsa import Ecdsa
+from ellipticcurve.publicKey import PublicKey
+from ellipticcurve.utils.compatibility import toBytes
+
 
 class IStorage(ABC):
     """
@@ -52,19 +57,16 @@ class ForgetfulStorage(IStorage):
         self.data = OrderedDict()
         self.ttl = ttl
         # Store our merkle root for individual profiles - use Orderedict since we are using this already
-        self.data_root = OrderedDict()
+        # self.data_root = OrderedDict()
 
     def __setitem__(self, key, value):
-        # This implementation by default overwrites existing entries
-        # if key in self.data:
-        #     del self.data[key]
-        # self.data[key] = (time.monotonic(), value)
-
         try:
             value_json = loads(value)
-            prefix = next(iter(value_json)) 
+            prefix = next(iter(value_json))
+            # New registration for a product
             if prefix == "newId":
                 if value_json["newId"] in self.data:
+                    # print(self.data)
                     print("ID already exists!")
                     pass
                 else:
@@ -72,23 +74,62 @@ class ForgetfulStorage(IStorage):
                     # key -> (time_created, list_of_events)
                     # Also add artificial delay to prevent race conditions - we keep this small for now to prove the point
                     time.sleep(0.01)
-                    self.data[key] = (time.monotonic(), set())
-                    self.data_root[key] = (time.monotonic(), set())
+                    creation_time = time.time()
+                    self.data[key] = (creation_time, "{}", "{}")
+                    # self.data_root[key] = (creation_time, "{}")
 
             # Append new events and root to existing record
             elif prefix == "id":
-                self.data[key][1].add(value_json["data"])
-                self.data_root[key][1].add(value_json["root"])
+                # extract from the tuple
+                creation_time_data, data_tup, root_tup = self.data[key]
 
+                data_json = loads(data_tup)
+                data_json[time.time()] = value_json["data"]
+                data = dumps(data_json)
+                self.data[key] = (creation_time_data, data)
+
+                # See if the user has inserted a "root" field
+                try:
+                    value_json["root"]
+                    data_root_json = loads(root_tup)
+                    data_root_json[time.time()] = value_json["root"]
+                    root_data = dumps(data_root_json)
+                    self.data[key] = (creation_time_data, data, root_data)
+                
+                # If they haven't - put the previous data back in its place 
+                except KeyError:
+                    self.data[key] = (creation_time_data, data, root_tup)
+
+            # New Registration for an actor (represented by a public key)
+            elif prefix == "newPub":
+                if value_json["newPub"] in self.data:
+                    print("Public key already registered")
+                else:
+                    new_pub_key = value_json["pub_key"]
+                    try:
+                        # Check if the key is actually valid
+                        _ = PublicKey.fromString(toBytes(new_pub_key))
+                    # We are being a bit lazy here - but starkbank has a "strange" exception we cannot define   
+                    except:
+                        print("Public Key is not valid!")
+                        # Do not proceed after this point
+                        return
+                    
+                    user = value_json["user"]
+                    creation_time = time.time()
+                    self.data[new_pub_key] = (creation_time, user)
+            
         except JSONDecodeError:
             print("Not Valid JSON!")
             pass
 
         self.cull()
 
+    # Our DHT must remain immutable, therefore we remove this function
     def cull(self):
-        for _, _ in self.iter_older_than(self.ttl):
-            self.data.popitem(last=False)
+        # for _, _ in self.iter_older_than(self.ttl):
+        #     self.data.popitem(last=False)
+        pass
 
     def get(self, key, default=None):
         self.cull()

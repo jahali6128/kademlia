@@ -1,6 +1,6 @@
-from kademlia.storage import ForgetfulStorage
 from uuid import uuid4
 import json
+from kademlia.storage import ForgetfulStorage
 
 
 class ForgetfulStorageTest:
@@ -39,7 +39,7 @@ def test_register():
     print(storage.get(newId))
 
     # Now set the same ID again - this time it should return an error
-    storage.__setitem__(newId, json.dumps(newRegister))
+    storage[newId] = json.dumps(newRegister)
 
     # Print all entries in our storage
     for i in storage:
@@ -58,15 +58,15 @@ def test_append_data():
 
     # Append more data
     data_2 = {"abc": 456, "foo": "baz"}
-    new_event_2 = {"id": newId, "data": json.dumps(data_2), "root": "0x12345"}
+    new_event_2 = {"id": newId, "data": json.dumps(data_2)}
     storage.__setitem__(newId, json.dumps(new_event_2))
-    
-    for i in storage:
-        print(f"Storage: {i}")
+    print(storage.data.values()) 
+    # for i in storage:
+    #     print(f"Storage: {i}")
 
-    print(f"Root: {storage.data_root}")
+    # print(f"Root: {storage.data_root}")
         
 if __name__ == "__main__":
-    # test_register()
-    test_append_data()
+    test_register()
+    # test_append_data()
     
