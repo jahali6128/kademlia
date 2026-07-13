@@ -50,13 +50,13 @@ def test_register():
     for i in storage:
         print(i)
 
-        
+
 def test_append_data():
     storage = ForgetfulStorage()
     newId = uuid4().hex
     newRegister = {"newId": newId}
     storage.__setitem__(newId, json.dumps(newRegister))
-    
+
     data = {"abc": 123, "foo": "bar"}
     new_event = {"id": newId, "data": json.dumps(data), "root": "0xabc"}
     storage.__setitem__(newId, json.dumps(new_event))
@@ -65,7 +65,7 @@ def test_append_data():
     data_2 = {"abc": 456, "foo": "baz"}
     new_event_2 = {"id": newId, "data": json.dumps(data_2)}
     storage.__setitem__(newId, json.dumps(new_event_2))
-    print(storage.data.values()) 
+    print(storage.data.values())
     # for i in storage:
     #     print(f"Storage: {i}")
 
@@ -78,17 +78,17 @@ def test_pub_insert():
     pub_key = priv_key.publicKey()
     pub_key_string = pub_key.toString()
     new_user_id = uuid4().hex
-    
+
     pub_request = {"newUser": new_user_id, "pubKey": pub_key_string}
     storage.__setitem__(new_user_id, json.dumps(pub_request))
-    
+
     print(storage.data)
     print(storage.data[new_user_id])
     # for i in storage.data.values():
     #     print(i)
-    
+
+
 if __name__ == "__main__":
     # test_register()
     # test_append_data()
     test_pub_insert()
-    

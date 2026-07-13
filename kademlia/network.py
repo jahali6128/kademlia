@@ -72,7 +72,8 @@ class Server:
         listen = loop.create_datagram_endpoint(
             self._create_protocol, local_addr=(interface, port)
         )
-        log.info("Node %i listening on %s:%i", self.node.long_id, interface, port)
+        log.info("Node %i listening on %s:%i",
+                 self.node.long_id, interface, port)
         self.transport, self.protocol = await listen
         # finally, schedule refreshing table
         self.refresh_table()
@@ -125,7 +126,8 @@ class Server:
             addrs: A `list` of (ip, port) `tuple` pairs.  Note that only IP
                    addresses are acceptable - hostnames will cause an error.
         """
-        log.debug("Attempting to bootstrap node with %i initial contacts", len(addrs))
+        log.debug(
+            "Attempting to bootstrap node with %i initial contacts", len(addrs))
         cos = list(map(self.bootstrap_node, addrs))
         gathered = await asyncio.gather(*cos)
         nodes = [node for node in gathered if node is not None]
@@ -155,7 +157,8 @@ class Server:
         if not nearest:
             log.warning("There are no known neighbors to get key %s", key)
             return None
-        spider = ValueSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
+        spider = ValueSpiderCrawl(
+            self.protocol, node, nearest, self.ksize, self.alpha)
         return await spider.find()
 
     async def set(self, key, value):
@@ -163,11 +166,12 @@ class Server:
         Set the given string key to the given value in the network.
         """
         if not check_dht_value_type(value):
-            raise TypeError("Value must be of type int, float, bool, str, or bytes")
-        
+            raise TypeError(
+                "Value must be of type int, float, bool, str, or bytes")
+
         value_json = loads(value)
         prefix = next(iter(value_json))
-        
+
         # Check if they are appending a record
         if prefix == "id":
             # Check the user parameter & get their key
@@ -175,11 +179,12 @@ class Server:
             user_pub_key_json = await self.get(user)
             user_pub_key_str = loads(user_pub_key_json)
             print(f"user_pub_key_str: {user_pub_key_str}")
-            # print(f"User Retrieved: {user_pub_key_str}") 
+            # print(f"User Retrieved: {user_pub_key_str}")
             # Convert to key object
             # Get the last element from the list
-            user_pub_key = PublicKey.fromString(toBytes(user_pub_key_str["pubKey"][-1]))
-            
+            user_pub_key = PublicKey.fromString(
+                toBytes(user_pub_key_str["pubKey"][-1]))
+
             # Convert signature from base64 into obj
             # `sig_base64` is stored as a string - we must convert to bytes
             sig_base64: bytes = toBytes(value_json["sig"])
@@ -190,13 +195,13 @@ class Server:
             msg = dumps(value_json)
             # Now we verify - will return True if verification successful
             check = Ecdsa.verify(msg, sig, user_pub_key)
-            
+
             if check == False:
                 print("Signature Verification Failed!")
                 # At this point, do not proceed
                 return
-                
-        log.info("setting '%s' = '%s' on network", key, value)        
+
+        log.info("setting '%s' = '%s' on network", key, value)
         dkey = digest(key)
         return await self.set_digest(dkey, value)
 
@@ -209,10 +214,12 @@ class Server:
 
         nearest = self.protocol.router.find_neighbors(node)
         if not nearest:
-            log.warning("There are no known neighbors to set key %s", dkey.hex())
+            log.warning(
+                "There are no known neighbors to set key %s", dkey.hex())
             return False
 
-        spider = NodeSpiderCrawl(self.protocol, node, nearest, self.ksize, self.alpha)
+        spider = NodeSpiderCrawl(
+            self.protocol, node, nearest, self.ksize, self.alpha)
         nodes = await spider.find()
         log.info("setting '%s' on %s", dkey.hex(), list(map(str, nodes)))
 

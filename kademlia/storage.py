@@ -10,6 +10,7 @@ from ellipticcurve.ecdsa import Ecdsa
 from ellipticcurve.publicKey import PublicKey
 from ellipticcurve.utils.compatibility import toBytes
 
+
 class IStorage(ABC):
     """
     Local storage for this node.
@@ -82,29 +83,32 @@ class ForgetfulStorage(IStorage):
                 # We need to enforce access control
                 # extract from the tuple
                 creation_time_data, data_tup, root_tup, key_tup = self.data[key]
-                
-                data_json = loads(data_tup)  
+
+                data_json = loads(data_tup)
                 data_json[time.time()] = value_json["data"]
                 data = dumps(data_json)
                 self.data[key] = (creation_time_data, data, root_tup, key_tup)
-                
+
                 # See if the user has inserted a "root" field
                 try:
                     value_json["root"]
                     data_root_json = loads(root_tup)
                     data_root_json[time.time()] = value_json["root"]
                     root_data = dumps(data_root_json)
-                    self.data[key] = (creation_time_data, data, root_data, key_tup)
+                    self.data[key] = (creation_time_data,
+                                      data, root_data, key_tup)
 
                     value_json["user"]
                     data_key_json = loads(key_tup)
                     data_key_json[time.time()] = value_json["user"]
                     key_data = dumps(data_key_json)
-                    self.data[key] = (creation_time_data, data, root_tup, key_data)
-                
+                    self.data[key] = (creation_time_data,
+                                      data, root_tup, key_data)
+
                 # If they haven't - put the previous data back in its place
                 except KeyError:
-                    self.data[key] = (creation_time_data, data, root_tup, key_tup)
+                    self.data[key] = (creation_time_data,
+                                      data, root_tup, key_tup)
 
             # New Registration for an actor (represented by a public key)
             elif prefix == "newUser":
