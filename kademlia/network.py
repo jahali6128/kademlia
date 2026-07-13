@@ -6,13 +6,17 @@ import asyncio
 import logging
 import pickle
 import random
-from json import loads, JSONDecodeError
+from json import loads, dumps, JSONDecodeError
 
 from kademlia.crawling import NodeSpiderCrawl, ValueSpiderCrawl
 from kademlia.node import Node
 from kademlia.protocol import KademliaProtocol
 from kademlia.storage import ForgetfulStorage
 from kademlia.utils import digest
+
+from ellipticcurve.publicKey import PublicKey
+from ellipticcurve.utils.compatibility import toBytes
+from ellipticcurve import Ecdsa, Signature
 
 log = logging.getLogger(__name__)
 
@@ -160,7 +164,39 @@ class Server:
         """
         if not check_dht_value_type(value):
             raise TypeError("Value must be of type int, float, bool, str, or bytes")
-        log.info("setting '%s' = '%s' on network", key, value)
+        
+        value_json = loads(value)
+        prefix = next(iter(value_json))
+        
+        # Check if they are appending a record
+        if prefix == "id":
+            # Check the user parameter & get their key
+            user = value_json["user"]
+            user_pub_key_json = await self.get(user)
+            user_pub_key_str = loads(user_pub_key_json)
+            print(f"user_pub_key_str: {user_pub_key_str}")
+            # print(f"User Retrieved: {user_pub_key_str}") 
+            # Convert to key object
+            # Get the last element from the list
+            user_pub_key = PublicKey.fromString(toBytes(user_pub_key_str["pubKey"][-1]))
+            
+            # Convert signature from base64 into obj
+            # `sig_base64` is stored as a string - we must convert to bytes
+            sig_base64: bytes = toBytes(value_json["sig"])
+            sig = Signature.fromBase64(sig_base64)
+
+            # To get the message we truncate the `sig` field
+            value_json.pop("sig")
+            msg = dumps(value_json)
+            # Now we verify - will return True if verification successful
+            check = Ecdsa.verify(msg, sig, user_pub_key)
+            
+            if check == False:
+                print("Signature Verification Failed!")
+                # At this point, do not proceed
+                return
+                
+        log.info("setting '%s' = '%s' on network", key, value)        
         dkey = digest(key)
         return await self.set_digest(dkey, value)
 

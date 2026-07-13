@@ -112,11 +112,12 @@ class ValueSpiderCrawl(SpiderCrawl):
         make sure we tell the nearest node that *didn't* have
         the value to store it.
         """
-        value_counts = Counter(values)
+        value_counts = Counter(values[0])
         if len(value_counts) != 1:
             log.warning(
                 "Got multiple values for key %i: %s", self.node.long_id, str(values)
             )
+        # Return the most numerous value found
         value = value_counts.most_common(1)[0][0]
 
         peer = self.nearest_without_value.popleft()

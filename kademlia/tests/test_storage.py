@@ -1,6 +1,11 @@
 from uuid import uuid4
 import json
+
 from kademlia.storage import ForgetfulStorage
+from ellipticcurve.ecdsa import Ecdsa
+from ellipticcurve.publicKey import PublicKey
+from ellipticcurve.privateKey import PrivateKey
+from ellipticcurve.utils.compatibility import toBytes
 
 
 class ForgetfulStorageTest:
@@ -65,8 +70,25 @@ def test_append_data():
     #     print(f"Storage: {i}")
 
     # print(f"Root: {storage.data_root}")
-        
+
+
+def test_pub_insert():
+    storage = ForgetfulStorage()
+    priv_key = PrivateKey()
+    pub_key = priv_key.publicKey()
+    pub_key_string = pub_key.toString()
+    new_user_id = uuid4().hex
+    
+    pub_request = {"newUser": new_user_id, "pubKey": pub_key_string}
+    storage.__setitem__(new_user_id, json.dumps(pub_request))
+    
+    print(storage.data)
+    print(storage.data[new_user_id])
+    # for i in storage.data.values():
+    #     print(i)
+    
 if __name__ == "__main__":
-    test_register()
+    # test_register()
     # test_append_data()
+    test_pub_insert()
     
