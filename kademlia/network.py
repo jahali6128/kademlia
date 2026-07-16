@@ -178,7 +178,7 @@ class Server:
             user = value_json["user"]
             user_pub_key_json = await self.get(user)
             user_pub_key_str = loads(user_pub_key_json)
-            print(f"user_pub_key_str: {user_pub_key_str}")
+            # print(f"user_pub_key_str: {user_pub_key_str}")
             # print(f"User Retrieved: {user_pub_key_str}")
             # Convert to key object
             # Get the last element from the list

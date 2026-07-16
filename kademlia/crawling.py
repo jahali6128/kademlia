@@ -112,7 +112,8 @@ class ValueSpiderCrawl(SpiderCrawl):
         make sure we tell the nearest node that *didn't* have
         the value to store it.
         """
-        value_counts = Counter(values[0])
+        value_counts = Counter(values)
+        # print(f"Value Counts: {value_counts}")
         if len(value_counts) != 1:
             log.warning(
                 "Got multiple values for key %i: %s", self.node.long_id, str(values)

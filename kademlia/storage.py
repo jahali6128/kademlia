@@ -75,19 +75,34 @@ class ForgetfulStorage(IStorage):
                     # Also add artificial delay to prevent race conditions - we keep this small for now to prove the point
                     time.sleep(0.01)
                     creation_time = time.time()
-                    self.data[key] = (creation_time, "{}", "{}", "{}")
+                    revoked = False
+                    self.data[key] = (creation_time, "{}", "{}", "{}", revoked)
                     # self.data_root[key] = (creation_time, "{}")
 
             # Append new events and root to existing record
             elif prefix == "id":
                 # We need to enforce access control
                 # extract from the tuple
-                creation_time_data, data_tup, root_tup, key_tup = self.data[key]
+                creation_time_data, data_tup, root_tup, key_tup, revoked = self.data[key]
+
+                if revoked == True:
+                    print("Revoked Profile cannot be appended to!")
+                    return
 
                 data_json = loads(data_tup)
                 data_json[time.time()] = value_json["data"]
                 data = dumps(data_json)
-                self.data[key] = (creation_time_data, data, root_tup, key_tup)
+                self.data[key] = (creation_time_data, data,
+                                  root_tup, key_tup, revoked)
+
+                try:
+                    if value_json["revoke"]:
+                        # Set the revoke parameter to true
+                        self.data[key] = (creation_time_data,
+                                          data, root_tup, key_tup, True)
+                except KeyError:
+                    # Ignore it
+                    pass
 
                 # See if the user has inserted a "root" field
                 try:
@@ -96,19 +111,19 @@ class ForgetfulStorage(IStorage):
                     data_root_json[time.time()] = value_json["root"]
                     root_data = dumps(data_root_json)
                     self.data[key] = (creation_time_data,
-                                      data, root_data, key_tup)
+                                      data, root_data, key_tup, revoked)
 
                     value_json["user"]
                     data_key_json = loads(key_tup)
                     data_key_json[time.time()] = value_json["user"]
                     key_data = dumps(data_key_json)
                     self.data[key] = (creation_time_data,
-                                      data, root_tup, key_data)
+                                      data, root_data, key_data, revoked)
 
                 # If they haven't - put the previous data back in its place
                 except KeyError:
                     self.data[key] = (creation_time_data,
-                                      data, root_tup, key_tup)
+                                      data, root_tup, key_tup, revoked)
 
             # New Registration for an actor (represented by a public key)
             elif prefix == "newUser":
@@ -126,6 +141,12 @@ class ForgetfulStorage(IStorage):
                         print("Public Key is not valid!")
                         # Do not proceed after this point
                         return
+
+            # elif prefix == "revokeId":
+            #     revoke_profile_id = value_json["revokeId"]
+            #     creation_time_data, data_tup, root_tup, key_tup, revoked = self.data[key]
+            #     self.data[key] = (creation_time_data,
+            #                           data_tup, root_tup, key_tup, True)
 
         except JSONDecodeError:
             print("Not Valid JSON!")
@@ -147,8 +168,8 @@ class ForgetfulStorage(IStorage):
 
     def __getitem__(self, key):
         self.cull()
+        # return self.data[key]
         return self.data[key]
-        # return self.data[key][1]
 
     def __repr__(self):
         self.cull()
